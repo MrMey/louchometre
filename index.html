@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Le Louchomètre</title>
+    <style>
+        /* --- MISE EN PAGE GLOBALE --- */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* --- GROUPE PERSONNAGE + BULLES --- */
+        .character-group {
+            position: absolute;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 300px;
+        }
+
+        /* Style commun des bulles */
+        .speech-bubble {
+            position: relative;
+            background: #fff;
+            border: 3px solid #4a3b2a;
+            border-radius: 20px;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            color: #333;
+            font-size: 18px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            line-height: 1.2;
+            width: 80%;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        /* Bulle du haut (pointe vers le bas) */
+        .top-bubble {
+            margin-bottom: 25px;
+        }
+        .top-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 15px 15px 0;
+            border-style: solid;
+            border-color: #4a3b2a transparent transparent;
+        }
+
+        /* Bulle du bas (pointe vers le haut) */
+        .bottom-bubble {
+            margin-top: 25px;
+            opacity: 0; /* Cachée par défaut */
+            transform: scale(0.8);
+            color: #c0392b; /* Rouge par défaut pour le verdict */
+            font-size: 22px;
+            text-transform: uppercase;
+        }
+        .bottom-bubble.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .bottom-bubble::after {
+            content: '';
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 0 15px 15px;
+            border-style: solid;
+            border-color: transparent transparent #4a3b2a;
+        }
+
+        .side-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 3px solid #fdfae5;
+        }
+
+        /* --- CONTENEUR DU CADRAN --- */
+        .gauge-container {
+            position: relative;
+            width: 450px;
+            height: 400px;
+            background: #fdfae5;
+            border-radius: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 4px solid #4a3b2a;
+        }
+
+        svg { width: 100%; height: 100%; overflow: visible; }
+        .gauge-title { font-size: 34px; font-weight: 900; fill: #222; font-family: 'Impact', sans-serif; text-transform: uppercase; }
+
+        .needle-group {
+            transition: transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform-origin: 225px 250px;
+            transform: rotate(-90deg);
+        }
+
+        .input-overlay { position: absolute; bottom: 40px; text-align: center; width: 100%; }
+        input[type="number"] { font-size: 28px; padding: 5px; width: 70px; text-align: center; border: 3px solid #4a3b2a; border-radius: 8px; font-weight: bold; outline: none; }
+        .result-text { margin-top: 15px; font-size: 32px; font-weight: 900; text-transform: uppercase; min-height: 40px; }
+
+        .status-ok { color: #27ae60; }
+        .status-warn { color: #f39c12; }
+        .status-louche { color: #d35400; }
+        .status-danger { color: #c0392b; }
+
+        @media (max-width: 950px) { .character-group { display: none; } }
+    </style>
+</head>
+<body>
+
+    <div class="character-group">
+        <div class="speech-bubble top-bubble">
+            Let me tell you how louche it is...
+        </div>
+        
+        <img src="let_me_tell_you.png" alt="Illustration" class="side-image">
+
+        <div id="bottomBubble" class="speech-bubble bottom-bubble">
+            </div>
+    </div>
+
+    <div class="gauge-container">
+        <svg viewBox="0 0 450 350">
+            <defs><path id="curvePath" d="M 75,250 A 150,150 0 0,1 375,250" /></defs>
+            <text class="gauge-title"><textPath href="#curvePath" startOffset="50%" text-anchor="middle">LOUCHOMÈTRE</textPath></text>
+            <g id="segments-layer"></g>
+            <path d="M 75,250 A 150,150 0 0,1 375,250" fill="none" stroke="#222" stroke-width="3" />
+            <path d="M 135,250 A 90,90 0 0,1 315,250" fill="none" stroke="#222" stroke-width="3" />
+            <line x1="75" y1="250" x2="135" y2="250" stroke="#222" stroke-width="3" />
+            <line x1="315" y1="250" x2="375" y2="250" stroke="#222" stroke-width="3" />
+            <g class="needle-group" id="gauge-needle">
+                <polygon points="225,250 218,250 225,80 232,250" fill="#222" />
+                <circle cx="225" cy="250" r="15" fill="#4a3b2a" stroke="#222" stroke-width="2"/>
+                <circle cx="225" cy="250" r="5" fill="#999" />
+            </g>
+            <text x="385" y="245" font-family="Arial" font-weight="bold" font-size="14" fill="#222">MAX</text>
+        </svg>
+
+        <div class="input-overlay">
+            <div style="font-size: 14px; font-weight: bold; color: #4a3b2a; margin-bottom: 8px;">NIVEAU (0-9) :</div>
+            <input type="number" id="levelInput" min="0" max="9" value="0" oninput="updateGauge()">
+            <div id="statusText" class="result-text">OK</div>
+        </div>
+    </div>
+
+    <script>
+        const totalLevels = 10; const cx = 225; const cy = 250; 
+        const colors = ["#2ecc71", "#55cc55", "#aacc33", "#d4cc00", "#f1c40f", "#f39c12", "#e67e22", "#d35400", "#e74c3c", "#c0392b"];
+        const segmentsLayer = document.getElementById('segments-layer');
+        let bubbleTimeout;
+
+        // Génération segments
+        for (let i = 0; i < totalLevels; i++) {
+            const step = 180 / totalLevels; const sA = 180 + (i * step); const eA = sA + step;
+            const p = (r, a) => ({ x: cx + r * Math.cos(a * Math.PI / 180), y: cy + r * Math.sin(a * Math.PI / 180) });
+            const sO = p(150, sA); const eO = p(150, eA); const sI = p(90, sA); const eI = p(90, eA);
+            const d = `M ${sO.x} ${sO.y} A 150 150 0 0 1 ${eO.x} ${eO.y} L ${eI.x} ${eI.y} A 90 90 0 0 0 ${sI.x} ${sI.y} Z`;
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path.setAttribute("d", d); path.setAttribute("fill", colors[i]); path.setAttribute("stroke", "#222");
+            segmentsLayer.appendChild(path);
+        }
+
+        function updateGauge() {
+            const input = document.getElementById('levelInput');
+            const needle = document.getElementById('gauge-needle');
+            const statusText = document.getElementById('statusText');
+            const bottomBubble = document.getElementById('bottomBubble');
+            
+            let val = parseInt(input.value) || 0;
+            val = Math.max(0, Math.min(9, val));
+
+            // Cacher la bulle du bas pendant le mouvement
+            bottomBubble.classList.remove('visible');
+            clearTimeout(bubbleTimeout);
+
+            // Update URL
+            const url = new URL(window.location); url.searchParams.set('niveau', val);
+            window.history.replaceState({}, '', url);
+
+            // Mouvement aiguille
+            needle.style.transform = `rotate(${-90 + (val * 20)}deg)`;
+
+            // Déterminer le texte
+            let msg = "ok"; let cl = "status-ok";
+            if (val >= 5 && val <= 6) { msg = "un peu louche"; cl = "status-warn"; }
+            else if (val >= 7 && val <= 8) { msg = "louche"; cl = "status-louche"; }
+            else if (val == 9) { msg = "très louche"; cl = "status-danger"; }
+
+            statusText.textContent = msg;
+            statusText.className = "result-text " + cl;
+
+            // Faire apparaître la bulle de texte une fois l'aiguille stabilisée (1.2s + marge)
+            bubbleTimeout = setTimeout(() => {
+                bottomBubble.textContent = msg;
+                bottomBubble.style.color = getComputedStyle(statusText).color;
+                bottomBubble.classList.add('visible');
+            }, 1300);
+        }
+
+        // Init
+        const niveauParam = new URLSearchParams(window.location.search).get('niveau');
+        if (niveauParam !== null) document.getElementById('levelInput').value = parseInt(niveauParam);
+        setTimeout(updateGauge, 150);
+    </script>
+</body>
+</html>
